@@ -19,7 +19,9 @@ package com.example.android.kotlincoroutines.main
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.android.kotlincoroutines.util.BACKGROUND
+import kotlinx.coroutines.*
 
 /**
  * MainViewModel designed to store and manage UI-related data in a lifecycle conscious way. This
@@ -28,6 +30,16 @@ import com.example.android.kotlincoroutines.util.BACKGROUND
  * results after the new Fragment or Activity is available.
  */
 class MainViewModel : ViewModel() {
+
+    /**
+     *  A scope controls the lifetime of coroutines through its job.
+     */
+    private val viewModelJob = Job()
+
+    /**
+     * In our example, uiScope will start coroutines in Dispatchers.Main which is the main thread on Android
+     */
+    private val uiScope = CoroutineScope(Dispatchers.Main + viewModelJob)
 
     /**
      * Request a snackbar to display a string.
@@ -49,12 +61,19 @@ class MainViewModel : ViewModel() {
      * Wait one second then display a snackbar.
      */
     fun onMainViewClicked() {
-        // TODO: Replace with coroutine implementation
-        BACKGROUND.submit {
+        //launch a coroutine in viewModelScope
+        viewModelScope.launch {
+            //suspend this corutine for one second
+            delay(1000)
+            // resume in the main dispatcher
+            // _snackbar.value can be called directly from main thread
+            _snackBar.value = "Hello, from coroutines!"
+        }
+        /*BACKGROUND.submit {
             Thread.sleep(1_000)
             // use postValue since we're in a background thread
             _snackBar.postValue("Hello, from threads!")
-        }
+        }*/
     }
 
     /**
@@ -62,5 +81,13 @@ class MainViewModel : ViewModel() {
      */
     fun onSnackbarShown() {
         _snackBar.value = null
+    }
+
+    /**
+     * onCleared is called when the ViewModel is no longer used and will be destroyed.
+     */
+    override fun onCleared() {
+        super.onCleared()
+        viewModelJob.cancel()
     }
 }
